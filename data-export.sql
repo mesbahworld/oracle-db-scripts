@@ -1,3 +1,4 @@
+
 -- Enable DBMS_OUTPUT to display results
 SET SERVEROUTPUT ON SIZE UNLIMITED;
 
@@ -25,6 +26,7 @@ DECLARE
   l_status      INTEGER;
   l_count       NUMBER;
   l_cols        VARCHAR2(32767);
+  l_max_row     NUMBER:=50;
 BEGIN
   DBMS_OUTPUT.PUT_LINE('-- ===============================');
   DBMS_OUTPUT.PUT_LINE('-- PASS 4: Data Export');
@@ -34,7 +36,7 @@ BEGIN
   FOR t IN (
     SELECT table_name
     FROM user_tables
-    WHERE NVL(num_rows,0) BETWEEN 1 AND 50
+    WHERE NVL(num_rows,0) BETWEEN 1 AND 100
       -- include filter
       AND (v_include_tables IS NULL 
            OR INSTR(',' || UPPER(v_include_tables) || ',', ',' || UPPER(table_name) || ',') > 0)
@@ -51,7 +53,7 @@ BEGIN
     EXECUTE IMMEDIATE 'SELECT COUNT(*) FROM ' || t.table_name INTO l_count;
 
     IF l_count > 0 THEN
-      l_sql := 'SELECT * FROM ' || t.table_name || ' WHERE ROWNUM <= 10';
+      l_sql := 'SELECT * FROM ' || t.table_name || ' WHERE ROWNUM <= '|| l_max_row;
       l_cursor := DBMS_SQL.OPEN_CURSOR;
       DBMS_SQL.PARSE(l_cursor, l_sql, DBMS_SQL.NATIVE);
       DBMS_SQL.DESCRIBE_COLUMNS(l_cursor, l_col_cnt, l_desc_tab);
@@ -84,7 +86,7 @@ BEGIN
       END LOOP;
 
       DBMS_SQL.CLOSE_CURSOR(l_cursor);
-      DBMS_OUTPUT.PUT_LINE('-- ' || LEAST(l_count,10) || ' sample rows shown out of ' || l_count || ' total');
+      DBMS_OUTPUT.PUT_LINE('-- ' || LEAST(l_count,l_max_row) || ' sample rows shown out of ' || l_count || ' total');
       DBMS_OUTPUT.PUT_LINE('');
     ELSE
       DBMS_OUTPUT.PUT_LINE('-- No rows in ' || t.table_name);
