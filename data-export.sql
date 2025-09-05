@@ -1,4 +1,13 @@
-SET SERVEROUTPUT ON
+-- Enable DBMS_OUTPUT to display results
+SET SERVEROUTPUT ON SIZE UNLIMITED;
+
+-- Set line size to handle long DDL statements
+SET LINESIZE 32767;
+SET PAGESIZE 0;
+
+-- Optional: Set timing on to see execution time
+SET TIMING ON;
+
 DECLARE
   -- Comma separated list of tables to include (NULL = all tables)
   v_include_tables VARCHAR2(32767) := NULL; 
@@ -15,6 +24,7 @@ DECLARE
   l_row         VARCHAR2(32767);
   l_status      INTEGER;
   l_count       NUMBER;
+  l_cols        VARCHAR2(32767);
 BEGIN
   DBMS_OUTPUT.PUT_LINE('-- ===============================');
   DBMS_OUTPUT.PUT_LINE('-- PASS 4: Data Export');
@@ -46,8 +56,11 @@ BEGIN
       DBMS_SQL.PARSE(l_cursor, l_sql, DBMS_SQL.NATIVE);
       DBMS_SQL.DESCRIBE_COLUMNS(l_cursor, l_col_cnt, l_desc_tab);
 
-      -- Define columns
+      -- Build column list
+      l_cols := '';
       FOR i IN 1..l_col_cnt LOOP
+        IF i > 1 THEN l_cols := l_cols || ', '; END IF;
+        l_cols := l_cols || l_desc_tab(i).col_name;
         DBMS_SQL.DEFINE_COLUMN(l_cursor, i, l_vc, 4000);
       END LOOP;
 
@@ -55,7 +68,7 @@ BEGIN
 
       -- Fetch rows
       WHILE DBMS_SQL.FETCH_ROWS(l_cursor) > 0 LOOP
-        l_row := 'INSERT INTO ' || t.table_name || ' VALUES (';
+        l_row := 'INSERT INTO ' || t.table_name || ' (' || l_cols || ') VALUES (';
         FOR i IN 1..l_col_cnt LOOP
           DBMS_SQL.COLUMN_VALUE(l_cursor, i, l_vc);
           IF i > 1 THEN l_row := l_row || ', '; END IF;
@@ -80,3 +93,9 @@ BEGIN
   END LOOP;
 END;
 /
+
+
+-- Reset settings
+SET TIMING OFF;
+SET PAGESIZE 14;
+SET LINESIZE 80;
